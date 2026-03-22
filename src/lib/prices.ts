@@ -15,10 +15,12 @@ export function pairPrices(intervals: PriceInterval[]): PricePair[] {
     }
     const pair = byTime.get(key)!;
     if (interval.channelType === "general") {
+      // general = buy/import rate; what you pay to consume from the grid
       pair.buyPrice = interval.perKwh;
     } else {
-      pair.sellPrice = Math.abs(interval.perKwh);
-      pair.negativeSell = interval.perKwh < 0;
+      // feedIn = sell/export rate; negate so positive = you receive money
+      pair.sellPrice = -interval.perKwh;
+      pair.negativeSell = interval.perKwh > 0;
     }
   }
 
@@ -27,10 +29,16 @@ export function pairPrices(intervals: PriceInterval[]): PricePair[] {
       (p): p is PricePair =>
         p.buyPrice !== undefined && p.sellPrice !== undefined
     ) as PricePair[]
-  ).sort((a, b) => a.startTime.localeCompare(b.startTime));
+  ).sort(
+    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+  );
 }
 
 export function currentPrices(pairs: PricePair[]): PricePair | undefined {
-  const now = new Date().toISOString();
-  return pairs.find((p) => p.startTime <= now && p.endTime >= now);
+  const nowMs = Date.now();
+  return pairs.find(
+    (p) =>
+      new Date(p.startTime).getTime() <= nowMs &&
+      new Date(p.endTime).getTime() >= nowMs
+  );
 }
