@@ -42,3 +42,13 @@ export function currentPrices(pairs: PricePair[], nowMs = Date.now()): PricePair
       new Date(p.endTime).getTime() >= nowMs
   );
 }
+
+/** Returns the index of the current interval in a sorted pairs array, or -1 if none matches. */
+export function currentPriceIndex(pairs: PricePair[], nowMs = Date.now()): number {
+  const reversedIdx = [...pairs].reverse().findIndex(
+    (p) =>
+      new Date(p.startTime).getTime() <= nowMs &&
+      new Date(p.endTime).getTime() >= nowMs
+  );
+  return reversedIdx === -1 ? -1 : pairs.length - 1 - reversedIdx;
+}

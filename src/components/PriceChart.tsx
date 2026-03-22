@@ -11,6 +11,7 @@ import {
   Brush,
 } from "recharts";
 import type { PricePair } from "@/types/api";
+import { currentPriceIndex } from "@/lib/prices";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface PriceChartProps {
@@ -63,12 +64,13 @@ function CustomTooltip({
 
 export default function PriceChart({ pairs }: PriceChartProps) {
   const nowMs = Date.now();
-  const data = pairs.map((p) => ({
+  const currentGlobalIdx = currentPriceIndex(pairs, nowMs);
+  const data = pairs.map((p, idx) => ({
     time: formatTime(p.startTime),
     buy: p.buyPrice,
     sell: p.sellPrice,
     negativeSell: p.negativeSell,
-    isPast: new Date(p.endTime).getTime() < nowMs,
+    isPast: currentGlobalIdx !== -1 && idx < currentGlobalIdx,
   }));
 
   // pairs is sorted ascending — search in reverse to get the most specific (latest-starting) match

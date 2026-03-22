@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { pairPrices, currentPrices } from "./prices";
+import { pairPrices, currentPrices, currentPriceIndex } from "./prices";
 import type { PriceInterval } from "../types/api";
 
 // Helper to build a minimal PriceInterval
@@ -83,6 +83,50 @@ describe("pairPrices", () => {
       slot("2026-01-01T10:00:01Z", "2026-01-01T10:30:00Z", 10, -5, true)
     );
     expect(pairs[0].forecast).toBe(true);
+  });
+});
+
+describe("currentPriceIndex", () => {
+  const pairs = pairPrices([
+    ...slot("2026-01-01T08:30:00Z", "2026-01-01T08:35:00Z", 18, -4),
+    ...slot("2026-01-01T08:35:00Z", "2026-01-01T08:40:00Z", 19, -4),
+    ...slot("2026-01-01T08:40:00Z", "2026-01-01T08:45:00Z", 20, -4),
+  ]);
+
+  it("returns the index of the interval containing nowMs", () => {
+    const nowMs = new Date("2026-01-01T08:37:00Z").getTime();
+    expect(currentPriceIndex(pairs, nowMs)).toBe(1);
+  });
+
+  it("marks only intervals before the current index as past", () => {
+    const nowMs = new Date("2026-01-01T08:42:00Z").getTime();
+    const idx = currentPriceIndex(pairs, nowMs);
+    // idx=2 (08:40 interval) → 08:30 and 08:35 are past, 08:40 is not
+    expect(idx).toBe(2);
+    pairs.forEach((_, i) => {
+      const isPast = idx !== -1 && i < idx;
+      if (i < 2) expect(isPast).toBe(true);
+      else expect(isPast).toBe(false);
+    });
+  });
+
+  it("does not mark the current interval itself as past", () => {
+    const nowMs = new Date("2026-01-01T08:37:00Z").getTime();
+    const idx = currentPriceIndex(pairs, nowMs);
+    expect(idx !== -1 && idx < idx).toBe(false);
+  });
+
+  it("returns -1 when no interval contains nowMs", () => {
+    const nowMs = new Date("2026-01-01T07:00:00Z").getTime();
+    expect(currentPriceIndex(pairs, nowMs)).toBe(-1);
+  });
+
+  it("returns -1 so nothing is faded when current interval is unknown", () => {
+    const nowMs = new Date("2026-01-01T07:00:00Z").getTime();
+    const idx = currentPriceIndex(pairs, nowMs);
+    pairs.forEach((_, i) => {
+      expect(idx !== -1 && i < idx).toBe(false);
+    });
   });
 });
 
