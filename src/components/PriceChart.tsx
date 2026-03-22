@@ -71,7 +71,8 @@ export default function PriceChart({ pairs }: PriceChartProps) {
     isPast: new Date(p.endTime).getTime() < nowMs,
   }));
 
-  const currentPair = pairs.find(
+  // pairs is sorted ascending — search in reverse to get the most specific (latest-starting) match
+  const currentPair = [...pairs].reverse().find(
     (p) => new Date(p.startTime).getTime() <= nowMs && new Date(p.endTime).getTime() >= nowMs
   );
   const nowLabel = currentPair ? formatTime(currentPair.startTime) : undefined;
@@ -97,11 +98,13 @@ export default function PriceChart({ pairs }: PriceChartProps) {
     if (pairs.length === 0) return;
     const win = defaultWindow();
     const now = Date.now();
-    const idx = pairs.findIndex(
+    // pairs is sorted ascending — find the last (most specific) interval containing now
+    const reversedIdx = [...pairs].reverse().findIndex(
       (p) =>
         new Date(p.startTime).getTime() <= now &&
         new Date(p.endTime).getTime() >= now
     );
+    const idx = reversedIdx === -1 ? -1 : pairs.length - 1 - reversedIdx;
     const start = idx === -1 ? 0 : Math.max(0, idx - 2);
     const end = Math.min(pairs.length - 1, start + win - 1);
     setBrushStart(start);
@@ -109,27 +112,52 @@ export default function PriceChart({ pairs }: PriceChartProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pairs.length]);
 
-  // Mousewheel pans the window without changing its size.
-  // passive:false lets us preventDefault so the page doesn't also scroll.
+  // Mousewheel pan (desktop) and touch swipe pan (mobile).
+  // Both use passive:false so we can preventDefault and stop the page scrolling.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-
-      // Scale delta: trackpads emit small fractional values, mice emit ~100
       const step = Math.sign(e.deltaY) * Math.max(1, Math.round(Math.abs(e.deltaY) / 40));
       const winSize = brushEndRef.current - brushStartRef.current;
       const maxStart = dataLenRef.current - 1 - winSize;
-
       const newStart = Math.max(0, Math.min(maxStart, brushStartRef.current + step));
       setBrushStart(newStart);
       setBrushEnd(newStart + winSize);
     };
 
+    // Track swipe start so we can compute cumulative delta on each touchmove
+    let touchStartX = 0;
+    let touchStartBrush = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartBrush = brushStartRef.current;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - touchStartX;
+      const winSize = brushEndRef.current - brushStartRef.current;
+      // Convert pixel delta to bar steps based on chart width
+      const pixelsPerBar = el.clientWidth / (winSize + 1);
+      const step = Math.round(-dx / pixelsPerBar);
+      const maxStart = dataLenRef.current - 1 - winSize;
+      const newStart = Math.max(0, Math.min(maxStart, touchStartBrush + step));
+      setBrushStart(newStart);
+      setBrushEnd(newStart + winSize);
+    };
+
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+    };
   }, []); // bind once — reads latest values via refs
 
   return (
@@ -142,7 +170,7 @@ export default function PriceChart({ pairs }: PriceChartProps) {
           <ResponsiveContainer width="100%" height={240}>
             <BarChart
               data={data}
-              margin={{ top: 4, right: 8, left: -16, bottom: 0 }}
+              margin={{ top: 16, right: 8, left: -16, bottom: 0 }}
               barCategoryGap="20%"
               barGap={2}
             >
