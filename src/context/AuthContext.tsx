@@ -7,10 +7,12 @@ import {
   useState,
 } from "react";
 import { login as apiLogin, logout as apiLogout, refresh } from "@/lib/auth";
+import { createApiClient, type ApiClient } from "@/lib/api";
 
 interface AuthContextValue {
   accessToken: string | null;
   isRestoring: boolean;
+  client: ApiClient;
   login(username: string, password: string): Promise<void>;
   logout(): Promise<void>;
 }
@@ -21,6 +23,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
   const didRestore = useRef(false);
+
+  // Keep a ref so the client closure always reads the latest token without
+  // needing to be recreated on every state change.
+  const tokenRef = useRef<string | null>(null);
+  tokenRef.current = accessToken;
+
+  // The client is created once for the lifetime of the provider.
+  const client = useRef<ApiClient>(
+    createApiClient(
+      () => tokenRef.current,
+      (newToken) => setAccessToken(newToken),
+      () => setAccessToken(null) // clears token → ProtectedRoute redirects to /login
+    )
+  ).current;
 
   // On mount, attempt to restore the session from the httpOnly refresh cookie.
   useEffect(() => {
@@ -46,7 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ accessToken, isRestoring, login, logout }}>
+    <AuthContext.Provider
+      value={{ accessToken, isRestoring, client, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );
