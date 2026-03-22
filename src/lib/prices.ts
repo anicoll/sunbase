@@ -34,8 +34,7 @@ export function pairPrices(intervals: PriceInterval[]): PricePair[] {
   );
 }
 
-export function currentPrices(pairs: PricePair[]): PricePair | undefined {
-  const nowMs = Date.now();
+export function currentPrices(pairs: PricePair[], nowMs = Date.now()): PricePair | undefined {
   // pairs is sorted ascending — reverse to get the most specific (latest-starting) match
   return [...pairs].reverse().find(
     (p) =>
