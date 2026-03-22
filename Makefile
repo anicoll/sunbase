@@ -8,22 +8,22 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-# ── Frontend ────────────────────────────────────────────────────────────────
+# ── App ─────────────────────────────────────────────────────────────────────
 
-install: ## Install frontend dependencies
-	cd frontend && npm install
+install: ## Install dependencies
+	npm install
 
-lint: ## Lint frontend (ESLint + TypeScript)
-	cd frontend && npm run lint
+lint: ## Lint (ESLint + TypeScript)
+	npm run lint
 
-build: ## Production build of the frontend
-	cd frontend && npm run build
+build: ## Production build
+	npm run build
 
-test: ## Run frontend tests (placeholder — add Vitest in a later PR)
+test: ## Run tests (placeholder — add Vitest in a later PR)
 	@echo "No tests yet. Coming soon."
 
-dev: ## Start frontend dev server (requires frontend/.env.local)
-	cd frontend && npm run dev
+dev: ## Start dev server (requires .env.local with VITE_API_BASE_URL)
+	npm run dev
 
 # ── Docker ──────────────────────────────────────────────────────────────────
 
@@ -41,5 +41,5 @@ docker-dev: ## Start dev stack (hot reload, mounts source)
 
 # ── Misc ────────────────────────────────────────────────────────────────────
 
-clean: ## Remove frontend build artefacts and node_modules
-	rm -rf frontend/dist frontend/node_modules
+clean: ## Remove build artefacts and node_modules
+	rm -rf dist node_modules
