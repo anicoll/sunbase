@@ -51,6 +51,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setIsRestoring(false));
   }, []);
 
+  // Proactively refresh the access token every 10 minutes while logged in.
+  useEffect(() => {
+    if (!accessToken) return;
+    const id = setInterval(() => {
+      refresh()
+        .then((res) => setAccessToken(res.access_token))
+        .catch(() => setAccessToken(null));
+    }, 1 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [accessToken]);
+
   const login = useCallback(async (username: string, password: string) => {
     const res = await apiLogin(username, password);
     setAccessToken(res.access_token);
