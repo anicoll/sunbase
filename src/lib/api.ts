@@ -13,6 +13,7 @@ const PRICE_FUTURE_HOURS = Number(
 export interface ApiClient {
   fetchProperties(): Promise<PropertyReading[]>;
   fetchPrices(): Promise<PriceInterval[]>;
+  allowFeedIn(): Promise<void>;
 }
 
 /**
@@ -28,11 +29,20 @@ export function createApiClient(
   onTokenRefreshed: (token: string) => void,
   onUnauthorized: () => void
 ): ApiClient {
-  async function request<T>(path: string, retrying = false): Promise<T> {
+  async function request<T>(
+    path: string,
+    retrying = false,
+    init?: RequestInit,
+    noBody = false
+  ): Promise<T> {
     const token = getToken();
     const res = await fetch(`${BASE_URL}${path}`, {
       credentials: "include",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      },
+      ...init,
     });
 
     if (res.status === 401 && !retrying) {
@@ -40,7 +50,7 @@ export function createApiClient(
       try {
         const refreshed = await refresh();
         onTokenRefreshed(refreshed.access_token);
-        return request<T>(path, true);
+        return request<T>(path, true, init, noBody);
       } catch {
         onUnauthorized();
         throw new Error("Session expired");
@@ -51,6 +61,7 @@ export function createApiClient(
       throw new Error(`API error ${res.status} ${res.statusText} — ${path}`);
     }
 
+    if (noBody) return undefined as T;
     return res.json() as Promise<T>;
   }
 
@@ -64,6 +75,13 @@ export function createApiClient(
       const start = new Date(now - PRICE_PAST_HOURS * 3_600_000).toISOString();
       const end = new Date(now + PRICE_FUTURE_HOURS * 3_600_000).toISOString();
       return request<PriceInterval[]>(`/amber/prices/${start}/${end}`);
+    },
+
+    allowFeedIn(): Promise<void> {
+      return request<void>("/inverter/feedin", false, {
+        method: "POST",
+        body: JSON.stringify({ disable: false }),
+      }, true);
     },
   };
 }
