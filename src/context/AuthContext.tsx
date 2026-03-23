@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       refresh()
         .then((res) => setAccessToken(res.access_token))
         .catch(() => setAccessToken(null));
-    }, 1 * 60 * 1000);
+    }, 10 * 60 * 1000);
     return () => clearInterval(id);
   }, [accessToken]);
 
