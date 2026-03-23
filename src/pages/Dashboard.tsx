@@ -8,6 +8,7 @@ import { pairPrices, currentPrices } from "@/lib/prices";
 import { parseInverterStatus } from "@/lib/properties";
 import { useProperties } from "@/hooks/useProperties";
 import { usePrices } from "@/hooks/usePrices";
+import { useAuth } from "@/context/AuthContext";
 import type { InverterMode } from "@/types/api";
 
 function fmt(kw: number) {
@@ -54,6 +55,7 @@ function Skeleton({ className }: { className?: string }) {
 }
 
 export default function Dashboard() {
+  const { client } = useAuth();
   const propertiesQuery = useProperties();
   const pricesQuery = usePrices();
 
@@ -72,6 +74,10 @@ export default function Dashboard() {
   const handleMode = (mode: InverterMode) => {
     // TODO PR-5: POST /api/mode
     console.log("Mode change requested:", mode);
+  };
+
+  const handleAllowFeedIn = () => {
+    client.allowFeedIn().catch(console.error);
   };
 
   const batteryPower =
@@ -328,6 +334,14 @@ export default function Dashboard() {
                   current={activeMode}
                   onClick={handleMode}
                 />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs font-bold tracking-wide"
+                  onClick={handleAllowFeedIn}
+                >
+                  Allow Feed-in
+                </Button>
               </CardContent>
             </Card>
           </div>
