@@ -9,6 +9,8 @@ import { parseInverterStatus } from "@/lib/properties";
 import { useProperties } from "@/hooks/useProperties";
 import { usePrices } from "@/hooks/usePrices";
 import { useAuth } from "@/context/AuthContext";
+import PowerGauge from "@/components/PowerGauge";
+import { toast } from "sonner";
 import type { InverterMode } from "@/types/api";
 
 function fmt(kw: number) {
@@ -77,7 +79,13 @@ export default function Dashboard() {
   };
 
   const handleAllowFeedIn = () => {
-    client.allowFeedIn().catch(console.error);
+    client
+      .allowFeedIn()
+      .then(() => toast.success("Feed-in enabled"))
+      .catch((err: unknown) => {
+        toast.error("Failed to enable feed-in");
+        console.error(err);
+      });
   };
 
   const batteryPower =
@@ -185,45 +193,85 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Secondary stats + actions */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {/* Inverter detail */}
-          <Card className="sm:col-span-1">
+        {/* Battery power + temperature gauges + current prices */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Card className="flex flex-col items-center justify-center py-4">
+            {isFirstLoad ? (
+              <Skeleton className="h-[110px] w-[110px] rounded-full" />
+            ) : (
+              <PowerGauge
+                value={status?.batteryChargingPower ?? 0}
+                max={6}
+                accent="charge"
+                label="Charging"
+                size={110}
+              />
+            )}
+          </Card>
+          <Card className="flex flex-col items-center justify-center py-4">
+            {isFirstLoad ? (
+              <Skeleton className="h-[110px] w-[110px] rounded-full" />
+            ) : (
+              <PowerGauge
+                value={status?.batteryDischargingPower ?? 0}
+                max={6}
+                accent="discharge"
+                label="Discharging"
+                size={110}
+              />
+            )}
+          </Card>
+          <Card className="flex flex-col items-center justify-center py-4">
+            {isFirstLoad ? (
+              <Skeleton className="h-[110px] w-[110px] rounded-full" />
+            ) : (
+              <PowerGauge
+                value={status?.inverterTemp ?? 0}
+                max={80}
+                accent="temp"
+                label="Inv. Temp"
+                unit="°C"
+                decimals={1}
+                size={110}
+              />
+            )}
+          </Card>
+          <Card>
             <CardHeader>
-              <CardTitle>Inverter</CardTitle>
+              <CardTitle>Current Prices</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
+            <CardContent>
               {isFirstLoad ? (
                 <div className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-8 w-20" />
+                  <Skeleton className="h-8 w-20" />
+                </div>
+              ) : activePrices ? (
+                <div className="flex gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Buy</p>
+                    <p className="text-xl font-bold text-solar-blue">
+                      {activePrices.buyPrice.toFixed(1)}
+                      <span className="text-sm font-normal text-muted-foreground">¢</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Sell</p>
+                    <p className={`text-xl font-bold ${activePrices.negativeSell ? "text-solar-red" : "text-solar-green"}`}>
+                      {activePrices.sellPrice.toFixed(1)}
+                      <span className="text-sm font-normal text-muted-foreground">¢</span>
+                    </p>
+                  </div>
                 </div>
               ) : (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Temperature</span>
-                    <span className="font-medium text-orange-400">
-                      {(status?.inverterTemp ?? 0).toFixed(1)} °C
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Battery charge</span>
-                    <span className="font-medium text-solar-green">
-                      {fmt(status?.batteryChargingPower ?? 0)} kW
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Battery discharge</span>
-                    <span className="font-medium text-solar-yellow">
-                      {fmt(status?.batteryDischargingPower ?? 0)} kW
-                    </span>
-                  </div>
-                </>
+                <p className="text-xs text-muted-foreground">Unavailable</p>
               )}
             </CardContent>
           </Card>
+        </div>
 
+        {/* Secondary stats + actions */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {/* Today's summary */}
           <Card className="sm:col-span-1">
             <CardHeader>
@@ -273,45 +321,8 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Prices + Actions */}
-          <div className="flex flex-col gap-3 sm:col-span-1">
-            {activePrices && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Current Prices</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Buy</p>
-                      <p className="text-xl font-bold text-solar-blue">
-                        {activePrices.buyPrice.toFixed(1)}
-                        <span className="text-sm font-normal text-muted-foreground">
-                          ¢
-                        </span>
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Sell</p>
-                      <p
-                        className={`text-xl font-bold ${
-                          activePrices.negativeSell
-                            ? "text-solar-red"
-                            : "text-solar-green"
-                        }`}
-                      >
-                        {activePrices.sellPrice.toFixed(1)}
-                        <span className="text-sm font-normal text-muted-foreground">
-                          ¢
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <Card>
+          {/* Actions */}
+          <Card>
               <CardHeader>
                 <CardTitle>Control Mode</CardTitle>
               </CardHeader>
@@ -344,7 +355,6 @@ export default function Dashboard() {
                 </Button>
               </CardContent>
             </Card>
-          </div>
         </div>
 
         {/* Price chart */}
