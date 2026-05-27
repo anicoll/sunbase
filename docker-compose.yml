@@ -5,10 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
-        VITE_PRICE_WINDOW_PAST_HOURS: ${VITE_PRICE_WINDOW_PAST_HOURS:-4}
-        VITE_PRICE_WINDOW_FUTURE_HOURS: ${VITE_PRICE_WINDOW_FUTURE_HOURS:-10}
         VITE_PROPERTIES_POLL_MS: ${VITE_PROPERTIES_POLL_MS:-10000}
-        VITE_PRICES_POLL_MS: ${VITE_PRICES_POLL_MS:-300000}
     ports:
       - "80:80"
     restart: unless-stopped

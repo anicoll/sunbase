@@ -1,18 +1,10 @@
-import type { PriceInterval, PropertyReading } from "@/types/api";
+import type { PropertyReading } from "@/types/api";
 import { refresh } from "@/lib/auth";
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
 
-const PRICE_PAST_HOURS = Number(
-  import.meta.env.VITE_PRICE_WINDOW_PAST_HOURS ?? 4
-);
-const PRICE_FUTURE_HOURS = Number(
-  import.meta.env.VITE_PRICE_WINDOW_FUTURE_HOURS ?? 10
-);
-
 export interface ApiClient {
   fetchProperties(): Promise<PropertyReading[]>;
-  fetchPrices(): Promise<PriceInterval[]>;
   allowFeedIn(): Promise<void>;
 }
 
@@ -68,13 +60,6 @@ export function createApiClient(
   return {
     fetchProperties(): Promise<PropertyReading[]> {
       return request<PropertyReading[]>("/properties");
-    },
-
-    fetchPrices(): Promise<PriceInterval[]> {
-      const now = Date.now();
-      const start = new Date(now - PRICE_PAST_HOURS * 3_600_000).toISOString();
-      const end = new Date(now + PRICE_FUTURE_HOURS * 3_600_000).toISOString();
-      return request<PriceInterval[]>(`/amber/prices/${start}/${end}`);
     },
 
     allowFeedIn(): Promise<void> {
