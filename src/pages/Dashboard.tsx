@@ -3,11 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import BatteryGauge from "@/components/BatteryGauge";
 import StatCard from "@/components/StatCard";
-import PriceChart from "@/components/PriceChart";
-import { pairPrices, currentPrices } from "@/lib/prices";
 import { parseInverterStatus } from "@/lib/properties";
 import { useProperties } from "@/hooks/useProperties";
-import { usePrices } from "@/hooks/usePrices";
 import { useAuth } from "@/context/AuthContext";
 import PowerGauge from "@/components/PowerGauge";
 import { toast } from "sonner";
@@ -59,17 +56,13 @@ function Skeleton({ className }: { className?: string }) {
 export default function Dashboard() {
   const { client } = useAuth();
   const propertiesQuery = useProperties();
-  const pricesQuery = usePrices();
 
   const status = propertiesQuery.data
     ? parseInverterStatus(propertiesQuery.data)
     : null;
 
-  const pricePairs = pricesQuery.data ? pairPrices(pricesQuery.data) : [];
-  const activePrices = currentPrices(pricePairs);
-
-  const isFirstLoad = propertiesQuery.isLoading || pricesQuery.isLoading;
-  const hasError = propertiesQuery.isError || pricesQuery.isError;
+  const isFirstLoad = propertiesQuery.isLoading;
+  const hasError = propertiesQuery.isError;
 
   // TODO PR-5: wire up to API mutation
   const activeMode: InverterMode | null = null;
@@ -125,9 +118,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             {hasError && (
               <span className="text-xs text-solar-red">
-                {propertiesQuery.isError && "Properties unavailable"}
-                {propertiesQuery.isError && pricesQuery.isError && " · "}
-                {pricesQuery.isError && "Prices unavailable"}
+                Properties unavailable
               </span>
             )}
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -194,7 +185,7 @@ export default function Dashboard() {
         </div>
 
         {/* Battery power + temperature gauges + current prices */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Card className="flex flex-col items-center justify-center py-4">
             {isFirstLoad ? (
               <Skeleton className="h-[110px] w-[110px] rounded-full" />
@@ -235,38 +226,6 @@ export default function Dashboard() {
                 size={110}
               />
             )}
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Current Prices</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isFirstLoad ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-8 w-20" />
-                  <Skeleton className="h-8 w-20" />
-                </div>
-              ) : activePrices ? (
-                <div className="flex gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Buy</p>
-                    <p className="text-xl font-bold text-solar-blue">
-                      {activePrices.buyPrice.toFixed(1)}
-                      <span className="text-sm font-normal text-muted-foreground">¢</span>
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Sell</p>
-                    <p className={`text-xl font-bold ${activePrices.negativeSell ? "text-solar-red" : "text-solar-green"}`}>
-                      {activePrices.sellPrice.toFixed(1)}
-                      <span className="text-sm font-normal text-muted-foreground">¢</span>
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">Unavailable</p>
-              )}
-            </CardContent>
           </Card>
         </div>
 
@@ -357,12 +316,6 @@ export default function Dashboard() {
             </Card>
         </div>
 
-        {/* Price chart */}
-        {pricesQuery.isLoading ? (
-          <Skeleton className="h-64 rounded-lg" />
-        ) : (
-          <PriceChart pairs={pricePairs} />
-        )}
       </main>
     </div>
   );
