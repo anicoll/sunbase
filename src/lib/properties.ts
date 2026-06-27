@@ -1,6 +1,6 @@
 import type { PropertyReading, InverterStatus } from "../types/api";
 
-const INVERTER_PREFIX = "SH60RS";
+const INVERTER_PREFIX = "SH80RS";
 
 function getNum(readings: PropertyReading[], slug: string): number {
   const r = readings.find(
